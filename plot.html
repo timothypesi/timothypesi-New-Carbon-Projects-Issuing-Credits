@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <style>
+        body {
+            font-family: 'Tableau Book', Arial, sans-serif;
+        }
+        .bar {
+            fill: #7fc593;
+        }
+        .bar:hover {
+            fill: #cce0d2;
+        }
+        .axis-label {
+            font-size: 11px;
+            text-anchor: middle;
+        }
+        .tooltip {
+            position: absolute;
+            text-align: center;
+            width: 100px;  /* Increased width to accommodate the new format */
+            height: 18px;
+            padding: 4px;
+            font: 15px 'Tableau Book', Arial;
+            background: white;
+            border: 0px;
+            border-radius: 0px;
+            pointer-events: none;
+        }
+        
+        .tooltip .year {
+            font-weight: normal;
+        }
+        
+        .tooltip .projects {
+            font-weight: bold;
+        }
+        .title {
+            font-size: 20px;
+            font-weight: bold;
+            text-anchor: start;
+        }
+        .subtitle {
+            font-size: 15px;
+            text-anchor: start;
+        }
+        .annotation {
+            font-size: 10px;
+            fill: #010101;
+        }
+        .footnote {
+            font-size: 15px;
+            fill: #1b1b1b;
+        }
+        .data-label {
+            font-size: 13px;
+            font-weight: bolder;
+            text-anchor: middle;
+        }
+        .axis text {
+            font-weight: normal;
+            font-size: 14px;  /* Increased from 11px to 14px */
+        }        
+        .axis path,
+        .x-axis path {
+            stroke: grey;
+            stroke-width: 0.5px;
+        }
+        .y-axis line {
+            stroke: grey;
+            stroke-width: 0.5px;
+        }
+        .grid line {
+            stroke: lightgrey;
+            stroke-dasharray: 3, 3;
+        }
+    </style>
+</head>
+<body>
+<div id="tooltip" class="tooltip" style="opacity:0;"></div>
+<script>
+    // New data
+    var data = [
+        {year: 2010, projects: 490},
+        {year: 2011, projects: 782},
+        {year: 2012, projects: 871},
+        {year: 2013, projects: 736},
+        {year: 2014, projects: 492},
+        {year: 2015, projects: 385},
+        {year: 2016, projects: 446},
+        {year: 2017, projects: 309},
+        {year: 2018, projects: 308},
+        {year: 2019, projects: 326},
+        {year: 2020, projects: 438},
+        {year: 2021, projects: 472},
+        {year: 2022, projects: 626},
+        {year: 2023, projects: 748},
+        {year: 2024, projects: 276}
+    ];
+
+    // Set dimensions
+    var width = 969;
+    var height = 598;
+    var margin = {top: 80, right: 30, bottom: 60, left: 60};
+
+    // Create SVG container
+    var svg = d3.select("body").append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    // Add title
+    svg.append("text")
+    .attr("class", "title")
+    .attr("x", -10)  // Adjusted to start slightly before the Y-axis
+    .attr("y", -margin.top / 2)
+    .text("Annual Count of New Carbon Projects Issuing Credits");
+
+    // Add subtitle
+    svg.append("text")
+    .attr("class", "subtitle")
+    .attr("x", -10)  // Adjusted to start slightly before the Y-axis
+    .attr("y", -margin.top / 2 + 25)
+    .text("Number of Newly Initiated Carbon Projects Issuing Credits Each Year (2010-2024)");
+
+    // Set scales
+    var x = d3.scaleBand()
+        .domain(data.map(function(d) { return d.year; }))
+        .range([0, width])
+        .padding(0.1);
+
+    var y = d3.scaleLinear()
+        .domain([0, d3.max(data, function(d) { return d.projects; })])
+        .nice()
+        .range([height, 0]);
+
+    // Create X-axis
+    svg.append("g")
+    .attr("class", "x-axis axis")
+    .attr("transform", "translate(0," + height + ")")
+    .call(d3.axisBottom(x).tickSize(0))  // Remove tick marks
+    .selectAll("text")
+    .style("text-anchor", "middle")
+    .style("font-size", "14px");  // Set font size to 12px
+
+        // Create Y-axis with multiples of 200
+    svg.append("g")
+    .attr("class", "y-axis axis")
+    .call(d3.axisLeft(y).ticks(6).tickSize(0))  // Show only tick marks
+    .call(g => g.select(".domain").remove())  // This removes the axis line
+    .append("text")
+    .attr("class", "axis-label")
+    .attr("transform", "rotate(-90)")
+    .attr("x", -height / 2)
+    .style("font-size", "12px")
+    .attr("y", -margin.left + 20)
+    .text("Number of Projects");
+
+    // Add horizontal grid lines
+    svg.append("g")
+    .attr("class", "grid")
+    .call(d3.axisLeft(y)
+        .tickSize(-width)
+        .tickFormat("")
+        .tickValues(d3.range(200, 801, 200))
+    )
+    .call(g => g.select(".domain").remove())
+    .call(g => g.selectAll(".tick line").attr("stroke", "#f5f5f5"));
+
+    // Create bars
+    svg.selectAll(".bar")
+    .data(data)
+    .enter().append("rect")
+    .attr("class", "bar")
+    .attr("x", function(d) { return x(d.year); })
+    .attr("y", function(d) { return y(d.projects); })
+    .attr("width", x.bandwidth())
+    .attr("height", function(d) { return height - y(d.projects); })
+    .on("mouseover", function(d) {
+        d3.select("#tooltip")
+            .style("opacity", 1)
+            .html('<span class="year">' + d.year + '</span> | <span class="projects">' + d.projects + '</span>')
+            .style("left", (d3.event.pageX + 5) + "px")
+            .style("top", (d3.event.pageY - 28) + "px");
+    })
+    .on("mouseout", function() {
+        d3.select("#tooltip")
+            .style("opacity", 0);
+    });
+
+
+    // Add data labels
+    svg.selectAll(".data-label")
+        .data(data)
+        .enter().append("text")
+        .attr("class", "data-label")
+        .attr("x", function(d) { return x(d.year) + x.bandwidth() / 2; })
+        .attr("y", function(d) { return y(d.projects) - 5; })
+        .text(function(d) { return d.projects; });
+
+    // Add annotation
+    svg.append("text")
+        .attr("class", "footnote")
+        .attr("x", -10)  // Align with the title
+        .attr("y", height + margin.bottom - 10)
+        .attr("text-anchor", "start")
+        .text("This viz tracks annual new carbon projects issuing credits (2010–2024) from CDM, ACR, VCS, CAR, and GS registries.");
+
+    // Add image
+    svg.append("image")
+    .attr("xlink:href", "https://raw.githubusercontent.com/timothypesi/New-Carbon-Projects-Issuing-Credits/main/Carbon%20Credits.png")
+    .attr("x", 437)
+    .attr("y", 90)
+    .attr("width", 208)
+    .attr("height", 179);
+
+</script>
+</body>
+</html>
